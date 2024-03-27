@@ -68,7 +68,7 @@ Após isso o programa calcula a lista que está em notação polonesa inversa:
 
 O programa adapta esse processo para realizar esse mesmo calculo para todos os possiveis 
 valores binarios, Ex.: 
-(~A v B) ^ C ---> A~BvC^ em notação polonesa inversa.
+(~ A v B) ^ C -> A~BvC^ em notação polonesa inversa.
 A = 0, B = 1, C = 1 (011)
 
     Símbolo Lido       Pilha      
@@ -88,6 +88,7 @@ A = 0, B = 1, C = 1 (011)
             Resultado: 1
 
 Assim segue para valores de 000 até 111 e forma a tabela:
+
     --------------------Tabela Verdade--------------------
     A       B       C       |       (~A v B) ^ C
 
