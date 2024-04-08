@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
-int first_op = -1, first_saida = -1, first_vars = -1;
+int first_op = -1, first_saida = -1, first_vars = -1, first_vars_rep = -1;
 char expr[100];
 
 // Função que analisa o nível de precedência dos operadores lógicos
@@ -94,35 +94,25 @@ void add_op(char *lista_op, char valor_op) {
 }
 
 // Função para verificar de uma variável da expressão é repetida
-int var_repetida(char *vars, char var, int index, int invertido) {
-    if (!invertido) {
-        for (int i = 0; i < index; i++) {
-            if (vars[i] == var) {
-                return 1;
-            }
+int var_repetida(char *vars, char var, int index) {
+    for (int i = 0; i < index; i++) {
+        if (vars[i] == var) {
+            return i;
         }
-        return 0;
-    } else {
-        for (int i = (int)strlen(vars) - 1; i > index; i--) {
-            if (vars[i] == var) {
-                return i;
-            }
-        }
-        return 0;
     }
+    return -1;
 }
 
 // Função que printa a tabela verdade
 void print_tabela(int *binario, int resultado, char *vars) {
     for (int i = 0; i < (int)strlen(vars); i++) {
-        if (!var_repetida(vars, vars[i], i, 1)) // se for variavel repetida não printa a coluna
-            printf("%d\t", binario[i]);
+        printf("%d\t", binario[i]);
     }
     printf("|\t%d\n", resultado);
     
 }
 
-char * shunting_yard(char *lista_saida, char *vars) {
+void shunting_yard(char *lista_saida, char *vars, char *vars_rep) {
     char lista_op[20];
 
     printf( "\nDigite uma expressao logica para receber sua tabela verdade\n"\
@@ -137,8 +127,14 @@ char * shunting_yard(char *lista_saida, char *vars) {
 
         else if (expr[i] != '(' && expr[i] != ')' && expr[i] != '~' && expr[i] != '^' && expr[i] != 'v' && expr[i] != '-' && expr[i] != '<' && expr[i] != '>' ) {
             lista_saida[++first_saida] = expr[i]; // Se é uma variavel, adicione à lista de saída
-            vars[++first_vars] = expr[i]; // Guarda a variavel para printar depois
-            vars[first_vars + 1] = '\0';
+
+            if (var_repetida(expr, expr[i], i) < 0) {
+                vars[++first_vars] = expr[i]; // Guarda a variavel para calculos e printar depois
+                vars[first_vars + 1] = '\0';
+            } else {
+                vars_rep[++first_vars_rep] = expr[i]; // Guarda a variavel na lista de vars repetidas para calculos
+                vars_rep[first_vars_rep + 1] = '\0';
+            }
         } 
         
         else { // Se é um operador...
@@ -176,46 +172,47 @@ char * shunting_yard(char *lista_saida, char *vars) {
     while (first_op >= 0){
         rmv_op(lista_op, lista_saida);
     }
-    return vars;
 }
 
 // Função que passa por cada valor possível das variáveis e imprime a tabela verdade
-void eval_expr(char *expr_npi, char *vars) {
-    int result, lista_result[30], first_lista = -1, count_var = 0;
+void eval_expr(char *expr_npi, char *vars, char *vars_rep) {
+    int result, lista_result[30], first_lista = -1;
 
     // Printa a primeira linha da tabela com o nome das variaveis e a expressão
     // Se for variável repetida não printa a coluna
     printf( "--------------------Tabela Verdade--------------------\n");
     for (int i = 0; i < (int)strlen(vars); i++) {
-        if (!var_repetida(vars, vars[i], i, 0)) {
-            printf("%c\t", vars[i]);
-        } else {
-            count_var++;
-        }
+        printf("%c\t", vars[i]);
     }
     printf("|\t%s\n", expr);
 
-    int QNT_LINHAS = pow(2, ((int)strlen(vars) - count_var));
+    int QNT_LINHAS = pow(2, ((int)strlen(vars)));
     for (int i = 0; i < QNT_LINHAS; i++) {
-        int binario[(int)strlen(vars)], decimal_value = i;
+        int binario[(int)strlen(vars)], binario_rep[(int)strlen(vars_rep)], decimal_value = i;
 
         // calcula valor binário para as variáveis. ex.: [a, b, c] = [0, 0, 0]
         // Se for variavel repetida atribui o mesmo valor da outra
         for (int j = (int)strlen(vars) - 1; j >= 0; j--) {
-            if (!var_repetida(vars, vars[j], j, 1)) {
-                binario[j] = decimal_value % 2;
-                decimal_value /= 2;
-            } else {
-                int index = var_repetida(vars, vars[j], j, 1);
-                binario[j] = binario[index];
-            }
+            binario[j] = decimal_value % 2;
+            decimal_value /= 2;
+        }
+        for (int j = 0; j < (int)strlen(vars_rep); j++) {
+            int index = var_repetida(vars, vars_rep[j], (int)strlen(vars));
+            binario_rep[j] = binario[index];
         }
 
         // Executa as operações como notação polonesa inversa (npi) com os valores binarios calculados
-        int count_var=0;
+        int count_var=0, count_var_rep=0;
         for (int j=0; j < (int)strlen(expr_npi); j++) { // Enquanto houverem simbolos a serem lidos...
+        
             if (expr_npi[j] != '~' && expr_npi[j] != '^' && expr_npi[j] != 'v' && expr_npi[j] != '-' && expr_npi[j] != '<' && expr_npi[j] != '>' ) {
-                lista_result[++first_lista] = binario[count_var++]; // Adiciona valor binário da variavel na lista para calculo
+                if (var_repetida(expr_npi, expr_npi[j], j) < 0) {
+                    // Adiciona valor binário da variavel na lista para calculo
+                    lista_result[++first_lista] = binario[count_var++];
+                } else {
+                    // Adiciona valor binário da variavel repetida na lista para calculo
+                    lista_result[++first_lista] = binario_rep[count_var_rep++];
+                }
             } 
             
             else if (expr_npi[j] == '-') {
@@ -258,10 +255,10 @@ int main(void) {
 			case 0: { break; }
 
 			case 1: {
-                char lista_saida[30], vars1[10], *vars2;
+                char lista_saida[30], vars[10], vars_rep[10];
 
-				vars2 = shunting_yard(lista_saida, vars1);
-                eval_expr(lista_saida, vars2);
+				shunting_yard(lista_saida, vars, vars_rep);
+                eval_expr(lista_saida, vars, vars_rep);
                 
                 first_op = -1;
                 first_saida = -1;
